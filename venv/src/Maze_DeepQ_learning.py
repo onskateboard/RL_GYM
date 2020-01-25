@@ -47,24 +47,33 @@ class DQNAgent:
         act_values = self.model.predict(state)
         return int(np.argmax(act_values[0]))  # returns action
 
-    def train(self, batch_size):
+    def train(self):
         ''' train the model
-         use the model_freeze to make the target values and then overwrite the weights from the model'''
-        minibatch = random.sample(self.memory, batch_size)
-        model_freeze = deepcopy(self.model)
+         use the model_freeze to make the target values and then overwrite the weights from the model
+         the replay buffer is 256 entries, we choose a sample with 32 entries for 10 to train the network
+         '''
 
-        for state, action, reward, next_state, done in minibatch:
-            #only one network
-            target_y = reward
-            if not done:
-                # berechne den Zielwert aus dem reward
-                target_y = (reward + self.gamma *
-                          np.amax(model_freeze.predict(next_state)[0]))
-            target = self.model.predict(state) #predict all the q values for the actions
-            target[0][action] = target_y # fill in the target_y value on the right position (right action)
-            # based on the model I calculte the distance to the target_y from the freeze network
+        for i in range(10):
 
-            self.model.fit(state, target, batch_size=batch_size, epochs=1, verbose=0)
+            minibatch = random.sample(self.memory, 32)
+            model_freeze = deepcopy(self.model)
+            state_list = []
+            target_list = []
+
+            for state, action, reward, next_state, done in minibatch:
+                #only one network
+                target_y = reward
+                if not done:
+                    # berechne den Zielwert aus dem reward
+                    target_y = (reward + self.gamma *
+                              np.amax(model_freeze.predict(next_state)[0]))
+                target = self.model.predict(state) #predict all the q values for the actions
+                target[0][action] = target_y # fill in the target_y value on the right position (right action)
+                # based on the model I calculte the distance to the target_y from the freeze network
+                target_list.append(list(target))
+                state_list.append(list(state))
+
+            self.model.fit(state_list, target_list, epochs=1, verbose=0)
 
     def load(self, name):
         self.model.load_weights(name)
@@ -89,7 +98,7 @@ def state_to_bucket(state):
     return tuple(bucket_indice)
 
 def get_explore_rate(t):
-    return max(MIN_EXPLORE_RATE, min(0.8, 1.0 - math.log10((t+1)/DECAY_FACTOR)))
+    return max(MIN_EXPLORE_RATE, min(0.8, 1.0 - math.log10((t+1)/(10*DECAY_FACTOR))))
 
 if __name__ == "__main__":
     env = gym.make('maze-sample-5x5-v0')
@@ -118,7 +127,7 @@ if __name__ == "__main__":
         rewardskum = 0
         state = env.reset()
         state = np.reshape(state, [1, state_size])
-        for time in range(1000):
+        for time in range(250):
             env.render()
             action = agent.act(state)
             try:
@@ -135,8 +144,8 @@ if __name__ == "__main__":
                 #       .format(e, EPISODES, time, agent.epsilon))
                 explore_rate = get_explore_rate(e)
                 break
-            if len(agent.memory) > batch_size:
-                agent.train(batch_size)
+            if len(agent.memory) > 512:
+                agent.train()
         explore_rate = get_explore_rate(e)
         print(f"Explore rate: {explore_rate}")
         print(f"Epsiode: {e}")
