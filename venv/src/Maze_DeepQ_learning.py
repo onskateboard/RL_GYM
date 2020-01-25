@@ -11,7 +11,9 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 import math
-EPISODES = 1000
+EPISODES = 2000
+
+##more and more
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
