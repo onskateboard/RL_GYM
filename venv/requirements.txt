@@ -1,0 +1,8 @@
+tensorflow 
+random
+gym
+gym_maze
+numpy
+collections
+keras 
+math
